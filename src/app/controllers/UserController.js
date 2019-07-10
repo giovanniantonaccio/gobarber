@@ -37,12 +37,12 @@ class UserController {
     const schema = Yup.object().shape({
       name: Yup.string(),
       email: Yup.string().email(),
-      oldPassword: Yup.string().min(6),
-      password: Yup.string()
+      oldPassword: Yup.string()
         .min(6)
-        .when('oldPassword', (oldPassword, field) =>
-          oldPassword ? field.required() : field
+        .when('password', (password, field) =>
+          password ? field.required() : field
         ),
+      password: Yup.string().min(6),
       confirmPassword: Yup.string().when('password', (password, field) =>
         password ? field.required().oneOf([Yup.ref('password')]) : field
       ),
@@ -52,11 +52,11 @@ class UserController {
       return res.status(400).json({ error: 'Validation failed' });
     }
 
-    const { email, oldPassword, password } = req.body;
+    const { email, oldPassword } = req.body;
 
     const user = await User.findByPk(req.userId);
 
-    if (email !== user.email) {
+    if (email && email !== user.email) {
       const userExists = await User.findOne({ where: { email } });
 
       if (userExists) {
@@ -68,16 +68,12 @@ class UserController {
       return res.status(401).json({ error: 'Password does not match' });
     }
 
-    if (!oldPassword && password) {
-      return res.status(401).json({ error: 'Old password missing' });
-    }
-
     const { id, name, provider } = await user.update(req.body);
 
     return res.json({
       id,
       name,
-      email,
+      email: user.email,
       provider,
     });
   }
