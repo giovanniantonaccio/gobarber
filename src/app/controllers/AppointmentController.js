@@ -34,6 +34,9 @@ class AppointmentController {
   }
 
   async store(req, res) {
+    /**
+     * Validate the fields of the request body
+     */
     const schema = Yup.object().shape({
       provider_id: Yup.number().required(),
       date: Yup.date().required(),
@@ -53,9 +56,18 @@ class AppointmentController {
     });
 
     if (!isProvider) {
-      res
+      return res
         .status(401)
         .json({ error: 'You can only create appointments with providers' });
+    }
+
+    /**
+     * Check if user and provider are different from each other
+     */
+    if (provider_id === req.userId) {
+      return res
+        .status(400)
+        .json({ error: 'User and provider needs to be different' });
     }
 
     /**
