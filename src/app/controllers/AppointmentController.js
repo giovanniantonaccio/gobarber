@@ -6,6 +6,9 @@ import File from '../models/File';
 import Appointment from '../models/Appointment';
 import Notification from '../schemas/Notification';
 
+import CancellationMail from '../jobs/CancellationMail';
+import Queue from '../../lib/Queue';
+
 class AppointmentController {
   async index(req, res) {
     const { page } = req.query;
@@ -132,7 +135,20 @@ class AppointmentController {
     /**
      * Get appointment from database based on param ID
      */
-    const appointment = await Appointment.findByPk(req.params.id);
+    const appointment = await Appointment.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'provider',
+          attributes: ['name', 'email'],
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name'],
+        },
+      ],
+    });
 
     /**
      * Check if user is the owner of the appointment
@@ -159,12 +175,22 @@ class AppointmentController {
      */
     appointment.canceled_at = new Date();
 
-    await appointment.save();
+    const { id, date, canceled_at, provider, user } = await appointment.save();
 
     /**
-     * Return the information of the cancelled appointment
+     * Send an email to the provider after cancelation of the appointment
      */
-    return res.json(appointment);
+    await Queue.add(CancellationMail.key, {
+      appointment,
+    });
+
+    return res.json({
+      id,
+      date,
+      canceled_at,
+      provider,
+      user,
+    });
   }
 }
 
