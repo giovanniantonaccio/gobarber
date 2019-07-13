@@ -171,6 +171,15 @@ class AppointmentController {
     }
 
     /**
+     * Check if the appointment was not previously cancelled
+     */
+    if (appointment.canceled_at) {
+      return res
+        .status(401)
+        .json({ error: 'This appointment was already cancelled' });
+    }
+
+    /**
      * Save the actual time to the canceled_at field in the database
      */
     appointment.canceled_at = new Date();
