@@ -18,7 +18,7 @@ class AppointmentController {
       order: ['date'],
       limit: 20,
       offset: (page - 1) * 20,
-      attributes: ['id', 'date'],
+      attributes: ['id', 'date', 'past', 'cancelable'],
       include: [
         {
           model: User,
@@ -168,6 +168,15 @@ class AppointmentController {
       return res
         .status(401)
         .json({ error: 'You can only cancel appointments 2 hours in advance' });
+    }
+
+    /**
+     * Check if the appointment was not previously cancelled
+     */
+    if (appointment.canceled_at) {
+      return res
+        .status(401)
+        .json({ error: 'This appointment was already cancelled' });
     }
 
     /**
