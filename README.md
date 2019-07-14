@@ -22,6 +22,11 @@ docker run --name redis -p 6379:6379 -d -t redis:alpine
 ```
 Rename `.env.example` to `.env` and fill the informations.
 
+Install the dependencies:
+```bash
+yarn
+```
+
 Run the following commands to run the server:
 ```bash
 yarn dev
