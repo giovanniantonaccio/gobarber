@@ -1,12 +1,9 @@
-import { isBefore, subHours } from 'date-fns';
 import User from '../models/User';
 import File from '../models/File';
 import Appointment from '../models/Appointment';
 
-import CancellationMail from '../jobs/CancellationMail';
-import Queue from '../../lib/Queue';
-
 import CreateAppointmentService from '../services/CreateAppointmentService';
+import CancelAppointmentService from '../services/CancelAppointmentService';
 
 class AppointmentController {
   async index(req, res) {
@@ -53,73 +50,13 @@ class AppointmentController {
   }
 
   async delete(req, res) {
-    /**
-     * Get appointment from database based on param ID
-     */
-    const appointment = await Appointment.findByPk(req.params.id, {
-      include: [
-        {
-          model: User,
-          as: 'provider',
-          attributes: ['name', 'email'],
-        },
-        {
-          model: User,
-          as: 'user',
-          attributes: ['name'],
-        },
-      ],
-    });
-
-    /**
-     * Check if user is the owner of the appointment
-     */
-    if (appointment.user_id !== req.userId) {
-      return res.status(401).json({
-        error: "You don't have permission to cancel this appointment",
-      });
-    }
-
-    /**
-     * Check if the appointment is not in the next two hours
-     */
-    const dateWithSub = subHours(appointment.date, 2);
-
-    if (isBefore(dateWithSub, new Date())) {
-      return res
-        .status(401)
-        .json({ error: 'You can only cancel appointments 2 hours in advance' });
-    }
-
-    /**
-     * Check if the appointment was not previously cancelled
-     */
-    if (appointment.canceled_at) {
-      return res
-        .status(401)
-        .json({ error: 'This appointment was already cancelled' });
-    }
-
-    /**
-     * Save the actual time to the canceled_at field in the database
-     */
-    appointment.canceled_at = new Date();
-
-    const { id, date, canceled_at, provider, user } = await appointment.save();
-
-    /**
-     * Send an email to the provider after cancelation of the appointment
-     */
-    await Queue.add(CancellationMail.key, {
-      appointment,
+    const appointment = await CancelAppointmentService.run({
+      provider_id: req.params.id,
+      user_id: req.userId,
     });
 
     return res.json({
-      id,
-      date,
-      canceled_at,
-      provider,
-      user,
+      appointment,
     });
   }
 }
